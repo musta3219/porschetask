@@ -1,0 +1,61 @@
+As a benchmark I used the following setup (CPU and memory)
+CPU(s):              4
+On-line CPU(s) list: 0-3
+Thread(s) per core:  1
+Core(s) per socket:  1
+Socket(s):           4
+Model name:          Intel(R) Xeon(R) Gold 5218B CPU @ 2.30GHz
+
+4 single-core single-thread processors @2.3 GHZ each.
+
+System memory is 4 GB.
+
+`openssl speed <algorithm>` was run where algorithm is in [ sha, ecdh, RSA, etc..] to check how many handshakes may be done
+in each case given the existing hardware for asymmetric encryption.
+
+SHA:
+Worst case scenario results (largest blocksize) in the case of sha:
+
+Doing sha1 for 3s on 16384 size blocks: 144338 sha1's in 2.99s --> 48112 handshakes per second
+
+Doing sha256 for 3s on 16384 size blocks: 64960 sha256's in 3.00s --> 21653 handshakes per second
+
+Doing sha512 for 3s on 16384 size blocks: 97021 sha512's in 2.99s --> 32340 handshakes per second
+
+CPU utilization (shown after running 'top' command) was 99% to 100%.
+
+With the proposed setup of four E7-4830V4 each having as per intel's documentation 14 cores and 28 threads, we should
+be covered to accept 25k requests (not the resumption case, meaning originalrequests without any pre-negotiated parameters being stored already) per second if SHA is used for the asymmetric roundtrip. Memory usage was not an issue (openssl libraries some years ago resulted in 
+memory consumption of 100KB per request/connection, down to 10KB per request reached by google on their own servers around 8 years ago)
+
+---------------------------------------------------------------------------------------------------------------------------
+ECDH:
+the best performance on the benchmark setup was  "253 bits ecdh (X25519)   0.0000s  22956 ops/sec
+second best is 256 bits ecdh (nistp256)   0.0001s  16113.4 ops/sec (0.0001s is the time taken for 1 handshake on average)
+
+poor performance:
+ 384 bits ecdh (nistp384)   0.0011s    911.1 ops/sec
+ 521 bits ecdh (nistp521)   0.0004s   2282.8 ops/sec
+ 448 bits ecdh (X448)   0.0007s   1473.8 ops/sec
+
+the same test should be done on a server having four E7-4830V4 to check the performance in this case in case at least 25k requests per second are expected.
+
+The same approach is to be followed when testing for different algorithms.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+Regarding the symmetric crypto vs network performance:
+
+The same benchmark setup was used with one 10Gbit/s NIC.
+
+a file "file1" sized 1500B was created (similar to a single MTU). This file was encrypted as follows with the number of iterations being 25000:
+
+time openssl enc -aes-256-cbc -md sha512 -pbkdf2 -iter 25000 -salt -in file1 -out file1.enc
+
+the output from time is:
+real    0m13.835s
+user    0m0.025s
+sys     0m0.003s
+
+real shows 13.835 secs. 25000 x 1500 = 37500000 Bytes, which is 0.0375 GB. This is less than what a single nic can handle per second. 
+
+The proposed system NICS (2x10Gbit/s) should be fine for 25k requests.
