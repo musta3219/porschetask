@@ -1,0 +1,18 @@
+##beginning of the script
+
+#!/bin/bash
+shuf -i 1-10 > file2
+
+##end of the script
+
+
+build instructions: Shebang (#!) with bash as the interpreter.
+
+usage: random numbers' generation
+
+description: the shuf command applies permutations to output random numbers each shown only once. The -i option
+expects an argument as an input range (low to high).
+
+The result is sent as standard output to "file2"
+
+known limitations/bugs: N/A
